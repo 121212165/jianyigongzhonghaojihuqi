@@ -288,6 +288,14 @@ function Config() {
             onClick={() => Taro.navigateTo({url: '/pages/push-settings/index'})}>
             推送设置
           </button>
+
+          <button
+            type="button"
+            className="w-full py-4 flex items-center justify-center leading-none text-xl border border-input bg-card text-foreground transition"
+            onClick={() => Taro.navigateTo({url: '/pages/data-source/index'})}>
+            <div className="i-mdi-database text-2xl mr-2" />
+            数据源配置
+          </button>
         </div>
       </div>
     </div>

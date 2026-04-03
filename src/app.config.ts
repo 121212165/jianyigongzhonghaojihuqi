@@ -3,7 +3,8 @@ const pages = [
   'pages/config/index',
   'pages/profile/index',
   'pages/login/index',
-  'pages/push-settings/index'
+  'pages/push-settings/index',
+  'pages/data-source/index'
 ]
 
 //  To fully leverage TypeScript's type safety and ensure its correctness, always enclose the configuration object within the global defineAppConfig helper function.

@@ -53,23 +53,78 @@ function Home() {
   const handleRefresh = async () => {
     setRefreshing(true)
     
-    // 先触发文章抓取
+    // 获取用户配置的数据源
+    const dataSource = Taro.getStorageSync('dataSource') || 'sogou'
+    const useThirdPartyApi = dataSource === 'third_party'
+    
+    // 根据数据源调用不同的Edge Function
     try {
-      const {error} = await supabase.functions.invoke('fetch_articles', {
-        body: {user_id: user!.id}
-      })
-      
-      if (error) {
-        console.error('抓取文章失败:', error)
+      if (useThirdPartyApi || dataSource === 'sogou') {
+        // 使用真实数据源（搜狗微信或第三方API）
+        Taro.showLoading({title: '抓取中...', mask: true})
+        const {data, error} = await supabase.functions.invoke('fetch_articles_real', {
+          body: {user_id: user!.id, use_third_party_api: useThirdPartyApi}
+        })
+        Taro.hideLoading()
+        
+        if (error) {
+          const errorMsg = await error?.context?.text?.()
+          console.error('抓取文章失败:', errorMsg || error.message)
+          
+          // 如果真实数据源失败，询问是否使用模拟数据
+          const res = await Taro.showModal({
+            title: '抓取失败',
+            content: '真实数据抓取失败，是否使用模拟数据？',
+            confirmText: '使用模拟数据',
+            cancelText: '取消'
+          })
+          
+          if (res.confirm) {
+            await supabase.functions.invoke('fetch_articles', {
+              body: {user_id: user!.id}
+            })
+            Taro.showToast({title: '已生成模拟数据', icon: 'success', duration: 2000})
+          }
+        } else {
+          const articlesCount = data?.articles_count || 0
+          const successCount = data?.success_count || 0
+          const failCount = data?.fail_count || 0
+          
+          if (articlesCount > 0) {
+            Taro.showToast({
+              title: `成功抓取${articlesCount}篇文章`,
+              icon: 'success',
+              duration: 2000
+            })
+          } else {
+            Taro.showModal({
+              title: '提示',
+              content: `未找到新文章\n成功: ${successCount} | 失败: ${failCount}`,
+              showCancel: false
+            })
+          }
+        }
+      } else {
+        // 使用模拟数据源
+        const {error} = await supabase.functions.invoke('fetch_articles', {
+          body: {user_id: user!.id}
+        })
+        
+        if (error) {
+          console.error('生成模拟数据失败:', error)
+          Taro.showToast({title: '操作失败', icon: 'none', duration: 2000})
+        } else {
+          Taro.showToast({title: '已生成模拟数据', icon: 'success', duration: 2000})
+        }
       }
     } catch (error) {
       console.error('抓取文章异常:', error)
+      Taro.showToast({title: '操作失败', icon: 'none', duration: 2000})
     }
     
-    // 然后刷新数据
+    // 刷新数据
     await loadData()
     setRefreshing(false)
-    Taro.showToast({title: '刷新成功', icon: 'success', duration: 1500})
   }
 
   // 按关键词分组文章
